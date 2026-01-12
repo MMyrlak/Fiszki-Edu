@@ -27,7 +27,7 @@ class Flashcard(Base):
     category: Mapped[Optional[str]] = mapped_column(String(100), index=True)
     
     last_reviewed: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    difficulty_level: Mapped[int] = mapped_column(default=1) # np. 1-5
+    difficulty_level: Mapped[int] = mapped_column(default=1) 
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     

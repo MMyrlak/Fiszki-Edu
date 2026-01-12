@@ -3,7 +3,6 @@ from typing import Optional
 from jose import jwt
 from passlib.context import CryptContext
 
-# W środowisku produkcyjnym te dane pobieramy z pliku .env
 SECRET_KEY = "SUPER_TAJNY_KLUCZ_DO_GENEROWANIA_TOKENOW_JWT" 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 # Token ważny 1h
