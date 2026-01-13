@@ -24,10 +24,9 @@ class Flashcard(Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     
-    category: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    topic: Mapped[Optional[str]] = mapped_column(String(100), index=True)
     
     last_reviewed: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    difficulty_level: Mapped[int] = mapped_column(default=1) 
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner: Mapped["User"] = relationship(back_populates="flashcards")
