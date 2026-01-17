@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 class UserBase(BaseModel):
     username: str
@@ -21,7 +21,25 @@ class UserLogin(BaseModel):
 
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+class FlashcardResponse(BaseModel):
+    question: Optional[str] = None
+    answer: Optional[str] = None
+    topic: Optional[str] = None
+    
+class FlashcardCreateRequest(BaseModel):
+    text: str
+    count: int = Field(default = 10, ge=1, le=30)
+
+class FlashcardListResponse(BaseModel):
+    count: int
+    pages: int
+    currentPage: int
+    results: List[FlashcardResponse]
+
+

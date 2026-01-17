@@ -1,129 +1,46 @@
 {
 	"info": {
-		"name": "Fiszki-Edu - Dokumentacja Projektowa 2026",
-		"description": "# 🧠 Projekt Fiszki-Edu\n\n**Fiszki-Edu** to inteligentna platforma backendowa do automatycznego generowania materiałów edukacyjnych z wykorzystaniem modelu **Gemini 2.5 Flash**.\n\n---\n\n## 🛠️ Stack Technologiczny\n- **Framework**: FastAPI (Python 3.12+)\n- **ORM**: SQLAlchemy 2.0 (Modern Declarative Mapping)\n- **Baza danych**: SQLite (Domyślna dla łatwości wdrożenia)\n- **Migracje**: Alembic\n- **AI**: Google Gemini 2.5 Flash (Generative AI)\n- **Bezpieczeństwo**: JWT (PyJWT), BCrypt (Haszowanie haseł)\n\n---\n\n## 📊 Struktura Bazy Danych (Schema)\n\n### 1. Tabela `users` (Użytkownicy)\n| Kolumna | Typ | Opis |\n| :--- | :--- | :--- |\n| `id` | Integer | Klucz główny (PK) |\n| `username` | String(50) | Unikalna nazwa użytkownika |\n| `email` | String(100) | Unikalny adres email (login) |\n| `hashed_password` | String(255) | Hasło po hashowaniu BCrypt |\n| `created_at` | DateTime | Data rejestracji (UTC) |\n\n### 2. Tabela `flashcards` (Fiszki)\n| Kolumna | Typ | Opis |\n| :--- | :--- | :--- |\n| `id` | Integer | Klucz główny (PK) |\n| `question` | Text | Treść pytania |\n| `answer` | Text | Treść odpowiedzi |\n| `topic` | String(150) | **Indeksowany temat** wygenerowany przez AI |\n| `user_id` | Integer | Klucz obcy (FK) -> `users.id` |\n| `created_at` | DateTime | Data utworzenia |\n\n---",
+		"name": "Fiszki-Edu API",
+		"description": "Kolekcja do obsługi systemu generowania fiszek",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "1. Autentykacja (🔐 Auth)",
-			"description": "Folder zawiera endpointy odpowiedzialne za zarządzanie dostępem.",
+			"name": "Auth",
 			"item": [
 				{
-					"name": "Rejestracja Nowego Użytkownika",
+					"name": "Register",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"url": "{{baseUrl}}/auth/register",
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"marcin_dev\",\n    \"email\": \"marcin@example.pl\",\n    \"password\": \"Projekt2026!\"\n}",
-							"options": { "raw": { "language": "json" } }
-						},
-						"url": { "raw": "{{base_url}}/auth/register" },
-						"description": "**Implementacja**:\n- Walidacja danych przez Pydantic (`UserCreate`).\n- Sprawdzenie unikalności emaila w bazie.\n- Hashowanie hasła.\n- Zapis SQLAlchemy i automatyczny zwrot tokena JWT."
-					}
-				},
-				{
-					"name": "Logowanie i Pobranie Tokena",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"email\": \"marcin@example.pl\",\n    \"password\": \"Projekt2026!\"\n}",
-							"options": { "raw": { "language": "json" } }
-						},
-						"url": { "raw": "{{base_url}}/auth/login" },
-						"description": "**Implementacja**:\n- Weryfikacja hasła funkcją `verify_password`.\n- Generowanie tokena JWT z claimami `sub` (email) oraz `exp` (czas wygaśnięcia)."
-					}
-				},
-				{
-					"name": "Sprawdzenie Profilu (Me)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": { "raw": "{{base_url}}/auth/me" },
-						"description": "**Implementacja**:\n- Wykorzystuje Dependency Injection `get_current_user`.\n- Zwraca dane przefiltrowane przez `UserOut` (bezpieczeństwo danych)."
+							"raw": "{\"username\": \"user1\", \"email\": \"test@edu.pl\", \"password\": \"haslo12345\"}"
+						}
 					}
 				}
 			]
 		},
 		{
-			"name": "2. Generowanie i Zarządzanie (🤖 AI)",
-			"description": "Główna logika biznesowa oparta na modelu Gemini.",
+			"name": "Flashcards",
 			"item": [
 				{
-					"name": "Generuj Fiszki z Tekstu",
+					"name": "Generate AI",
 					"request": {
+						"auth": { "type": "bearer", "bearer": [{"key": "token", "value": "{{jwt_token}}", "type": "string"}] },
 						"method": "POST",
-						"header": [],
+						"url": "{{baseUrl}}/flashcards/generate",
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"text\": \"Mitochondrium to organellum komórkowe, w którym zachodzi proces oddychania komórkowego. Jest nazywane elektrownią komórki.\"\n}",
-							"options": { "raw": { "language": "json" } }
-						},
-						"url": { "raw": "{{base_url}}/flashcards/generate" },
-						"description": "**Implementacja AI**:\n- Prompt do Gemini wymuszający strukturę JSON.\n- Model sam nadaje `topic` na podstawie treści.\n- Automatyczne powiązanie rekordów z zalogowanym użytkownikiem."
-					}
-				},
-				{
-					"name": "Pobierz Listę Tematów (Folders)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": { "raw": "{{base_url}}/flashcards/topics" },
-						"description": "**Zastosowanie**: Endpoint dla ekranu głównego.\n\n**Implementacja**: Zapytanie SQL `DISTINCT` na kolumnie `topic` dla danego `user_id`."
-					}
-				},
-				{
-					"name": "Pobierz Fiszki dla Tematu",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/flashcards/topic/:topic_name",
-							"variable": [
-								{ "key": "topic_name", "value": "Biologia Komórki" }
-							]
-						},
-						"description": "**Zastosowanie**: Wyświetlanie fiszek po kliknięciu w konkretny folder tematyczny."
-					}
-				}
-			]
-		},
-		{
-			"name": "3. Administracja (🛠️ CRUD)",
-			"item": [
-				{
-					"name": "Aktualizuj Fiszkę",
-					"request": {
-						"method": "PATCH",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"topic\": \"Biologia - Zaawansowana\",\n    \"question\": \"Gdzie produkowane jest ATP?\"\n}",
-							"options": { "raw": { "language": "json" } }
-						},
-						"url": { "raw": "{{base_url}}/flashcards/1" }
-					}
-				},
-				{
-					"name": "Usuń Fiszkę",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": { "raw": "{{base_url}}/flashcards/1" }
+							"raw": "{\"text\": \"Ziemia krąży wokół Słońca...\"}"
+						}
 					}
 				}
 			]
 		}
 	],
-	"auth": {
-		"type": "bearer",
-		"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
-	},
 	"variable": [
-		{ "key": "base_url", "value": "http://127.0.0.1:8000", "type": "string" },
-		{ "key": "jwt_token", "value": "WKLEJ_TOKEN_PO_LOGOWANIU", "type": "string" }
+		{ "key": "baseUrl", "value": "http://localhost:8000" },
+		{ "key": "jwt_token", "value": "" }
 	]
 }
