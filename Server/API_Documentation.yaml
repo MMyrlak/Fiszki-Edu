@@ -1,0 +1,227 @@
+openapi: 3.1.0
+info:
+  title: Fiszki-Edu API
+  description: |
+    API do inteligentnego generowania i zarządzania fiszkami przy użyciu AI Gemini 2.5 Flash.
+    System wspiera widok hierarchiczny (Tematy -> Fiszki) oraz zaawansowaną autoryzację JWT.
+  version: 1.2.0
+  contact:
+    name: Wsparcie Fiszki-Edu
+    url: https://github.com/MMyrlak/Fiszki-Edu
+
+servers:
+  - url: http://localhost:8000
+    description: Lokalny serwer deweloperski
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Modele Autoryzacji ---
+    UserRegister:
+      type: object
+      required: [username, email, password]
+      properties:
+        username: { type: string, example: "Marcin" }
+        email: { type: string, format: email, example: "marcin@test.pl" }
+        password: { type: string, minLength: 8, example: "TajneHaslo123" }
+
+    UserLogin:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    TokenPair:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, example: "bearer" }
+
+    # --- Modele Fiszek ---
+    Flashcard:
+      type: object
+      properties:
+        id: { type: integer }
+        question: { type: string }
+        answer: { type: string }
+        topic: { type: string }
+        created_at: { type: string, format: date-time }
+
+    FlashcardCreateRequest:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, description: "Tekst źródłowy dla AI" }
+        count: { type: integer, default: 10, minimum: 1, maximum: 30 }
+
+    FlashcardList:
+      type: object
+      properties:
+        count: { type: integer, description: "Łączna liczba fiszek" }
+        pages: { type: integer, description: "Łączna liczba stron" }
+        currentPage: { type: integer }
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Flashcard'
+
+paths:
+  # --- AUTH ---
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Rejestracja i automatyczne logowanie
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserRegister' }
+      responses:
+        '201':
+          description: Utworzono konto
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Logowanie użytkownika
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserLogin' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Odświeżenie sesji za pomocą Refresh Tokena
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+
+  # --- FLASHCARDS AI ---
+  /flashcards/generate:
+    post:
+      tags: [AI]
+      summary: Generowanie fiszek z tekstu
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FlashcardCreateRequest' }
+      responses:
+        '201':
+          description: Wygenerowane fiszki
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Flashcard' }
+
+  # --- MANAGEMENT ---
+  /flashcards:
+    get:
+      tags: [Management]
+      summary: Wszystkie fiszki z pagynacją
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FlashcardList' }
+
+  /flashcards/topics:
+    get:
+      tags: [Topics]
+      summary: Lista unikalnych tematów (folderów)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+
+  /flashcards/topic/{topic_name}:
+    get:
+      tags: [Topics]
+      summary: Fiszki z wybranego tematu
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: topic_name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Flashcard' }
+    delete:
+      tags: [Topics]
+      summary: Usuwanie całej kolekcji (tematu)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: topic_name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Temat usunięty
+
+  /flashcards/{id}:
+    patch:
+      tags: [Management]
+      summary: Edycja pojedynczej fiszki
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Flashcard' }
+    delete:
+      tags: [Management]
+      summary: Usunięcie pojedynczej fiszki
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Usunięto

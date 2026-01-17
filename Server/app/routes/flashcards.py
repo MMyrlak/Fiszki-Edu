@@ -15,9 +15,13 @@ from app.schemas import (
 )
 from app.auth.deps import get_current_user
 
+import os
+from dotenv import load_dotenv
+
 router = APIRouter(prefix="/flashcards", tags=["Flashcards"])
 
-genai.configure(api_key="AIzaSyBbX3VHb4-g3mNaric-BBXHm4yzIyxISrA")
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 ai_model = genai.GenerativeModel('gemini-2.5-flash')
 
 
@@ -95,7 +99,7 @@ def list_unique_topics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Zwraca unikalne tematy (kolekcje) użytkownika[cite: 166]."""
+    """Zwraca unikalne tematy (kolekcje) użytkownika."""
     topics = db.query(Flashcard.topic).filter(
         Flashcard.user_id == current_user.id
     ).distinct().all()
@@ -107,13 +111,12 @@ def get_by_topic(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Pobiera fiszki z konkretnej kolekcji[cite: 200]."""
+    """Pobiera fiszki z konkretnej kolekcji."""
     return db.query(Flashcard).filter(
         Flashcard.user_id == current_user.id,
         Flashcard.topic == topic_name
     ).all()
 
-# --- ENDPOINTY ADMINISTRACYJNE (CRUD) ---
 
 @router.patch("/{id}", response_model=FlashcardResponse)
 def update_flashcard(

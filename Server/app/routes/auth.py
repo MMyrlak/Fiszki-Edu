@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.schemas import UserCreate, UserLogin, Token, UserOut
-from app.auth.security import hash_password, verify_password, create_access_token
+from app.auth.security import hash_password, verify_password, create_access_token, create_refresh_token
 from app.auth.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -24,21 +24,33 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     
-    token = create_access_token(data={"sub": new_user.email})
-    return {"access_token": token, "token_type": "bearer"}
+    access_token = create_access_token(data={"sub": new_user.email})
+    refresh_token = create_refresh_token(data={"sub": new_user.email})
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
 
 @router.post("/login", response_model=Token)
-def login(user_data: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == user_data.email).first()
+def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == user_credentials.email).first()
     
-    if not user or not verify_password(user_data.password, user.hashed_password):
+    if not user or not verify_password(user_credentials.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Niepoprawny email lub hasło"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nieprawidłowy e-mail lub hasło"
         )
-    
-    token = create_access_token(data={"sub": user.email})
-    return {"access_token": token, "token_type": "bearer"}
+
+    access_token = create_access_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email})
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
 
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: User = Depends(get_current_user)):
